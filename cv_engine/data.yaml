@@ -1,0 +1,15 @@
+# AeroGuard Defect Detection Dataset Configuration
+path: ./dataset # dataset root dir
+train: images/train # train images (relative to path)
+val: images/val # val images (relative to path)
+
+# Number of classes
+nc: 5
+
+# Defect Class Names
+names:
+  0: Crack
+  1: Corrosion
+  2: Dent
+  3: Scratch
+  4: Welding Defect

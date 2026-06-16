@@ -1,0 +1,35 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Dependency directories
+node_modules/
+
+# Next.js build output
+.next/
+dist/
+build/
+out/
+
+# Python Cache
+**pycache**/
+__pycache__/
+.pytest_cache/
+*.cache
+
+# logs and temp
+*.log
+*.tmp
+.DS_Store
+
+# Model weights
+*.pt
+*.pth
+
+# Environments & secrets
+.env
+.env.local
+.env.production
+.env.development
+.env.test

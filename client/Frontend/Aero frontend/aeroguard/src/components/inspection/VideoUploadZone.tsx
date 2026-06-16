@@ -9,7 +9,7 @@ export default function VideoUploadZone({ onNext, onBack }: { onNext: () => void
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFile = useCallback((file: File) => {
-    startUpload(file.name);
+    startUpload(file);
   }, [startUpload]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -44,7 +44,7 @@ export default function VideoUploadZone({ onNext, onBack }: { onNext: () => void
             : 'border-border-default bg-surface hover:border-border-strong'
         }`}
       >
-        <input type="file" accept="video/*" onChange={handleSelect} className="hidden" />
+        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleSelect} className="hidden" />
 
         {isUploading ? (
           <div className="flex flex-col items-center">
@@ -75,10 +75,10 @@ export default function VideoUploadZone({ onNext, onBack }: { onNext: () => void
         ) : (
           <div className="flex flex-col items-center">
             <Upload className="mb-3 h-10 w-10 text-text-tertiary" />
-            <p className="text-[14px] font-medium text-text-secondary">Drop video file here</p>
+            <p className="text-[14px] font-medium text-text-secondary">Drop image file here</p>
             <p className="mt-1 text-[13px] text-text-tertiary">or click to select</p>
             <div className="mt-4 flex gap-2">
-              {['MP4', 'MOV', 'AVI', 'MKV', '4K'].map((f) => (
+              {['JPG', 'JPEG', 'PNG', 'WEBP', '15MB'].map((f) => (
                 <span key={f} className="rounded border border-border-subtle bg-elevated px-2 py-0.5 text-[10px] font-medium text-text-tertiary">{f}</span>
               ))}
             </div>

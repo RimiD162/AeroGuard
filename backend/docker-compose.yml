@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  detection-service:
+    build: .
+    container_name: aeroguard-detection-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - YOLO_MODEL_PATH=models/yolov8n.pt
+      - CONFIDENCE_THRESHOLD=0.25
+      - DEVICE=cpu
+    restart: always
