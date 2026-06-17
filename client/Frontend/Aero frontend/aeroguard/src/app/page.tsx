@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import AetherBackground from '../components/shared/AetherBackground';
 import {
   ArrowRight,
@@ -32,11 +32,10 @@ function Nav() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 flex h-[56px] items-center justify-between px-6 transition-all duration-300 ${
-        scrolled
+      className={`fixed top-0 left-0 right-0 z-50 flex h-[56px] items-center justify-between px-6 transition-all duration-300 ${scrolled
           ? 'glass-nav border-b border-border-subtle'
           : 'bg-transparent'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-xs font-bold text-white">
@@ -89,7 +88,7 @@ function Hero() {
       {/* Radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
 
-      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col lg:flex-row items-center gap-16 px-6 pt-[56px] z-10">
+      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col lg:flex-row items-center gap-16 px-6 pt-[56px] z-10">
         {/* Left content */}
         <div className="flex-1 max-w-[560px]">
           <motion.div
@@ -188,7 +187,17 @@ function Hero() {
 
 /* ─── Animated Pipeline Diagram ─── */
 function PipelineDiagram() {
+  // --- CONFIGURABLE DIMENSIONS ---
+  // Change these numbers to adjust the box size. 
+  // For a perfect 16:9 rectangle, use sizes like 960x540, 1280x720, or 640x360.
+  const BOX_WIDTH = 2048;
+  const BOX_HEIGHT = 1350;
+  // -------------------------------
+
   const [activeStage, setActiveStage] = useState(0);
+  const [phase, setPhase] = useState<'pipeline' | 'video'>('pipeline');
+  const [currentVideo, setCurrentVideo] = useState(1);
+
   const stages = [
     { icon: Upload, label: 'Upload', detail: '4K Video' },
     { icon: Cpu, label: 'AI Detection', detail: '1,247 Frames' },
@@ -199,68 +208,129 @@ function PipelineDiagram() {
   ];
 
   useEffect(() => {
+    if (phase !== 'pipeline') return;
+
     const interval = setInterval(() => {
-      setActiveStage((prev) => (prev + 1) % stages.length);
+      setActiveStage((prev) => {
+        const next = prev + 1;
+        if (next >= stages.length) {
+          clearInterval(interval);
+          setTimeout(() => setPhase('video'), 1000);
+          return next;
+        }
+        return next;
+      });
     }, 2000);
     return () => clearInterval(interval);
-  }, [stages.length]);
+  }, [stages.length, phase]);
+
+  // We removed the flipping phase intermediate effect
 
   return (
-    <div className="relative rounded-xl border border-border-subtle bg-surface/50 p-8">
-      <div className="space-y-3">
-        {stages.map((stage, i) => {
-          const Icon = stage.icon;
-          const isActive = i === activeStage;
-          const isComplete = i < activeStage;
+    <div 
+      className="relative overflow-hidden rounded-xl border border-border-subtle bg-surface/50 mx-auto" 
+      style={{ 
+        width: '100%',
+        maxWidth: `${BOX_WIDTH}px`,
+        height: 'auto',
+        aspectRatio: `${BOX_WIDTH} / ${BOX_HEIGHT}`,
+        perspective: '1200px' 
+      }}
+    >
+      <AnimatePresence mode="wait">
+        {phase === 'pipeline' && (
+          <motion.div
+            key="pipeline"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-full w-full flex-col justify-center p-6"
+          >
+            <div className="space-y-3">
+              {stages.map((stage, i) => {
+                const Icon = stage.icon;
+                const isActive = i === activeStage;
+                const isComplete = i < activeStage;
 
-          return (
-            <div
-              key={stage.label}
-              className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-500 ${
-                isActive
-                  ? 'border-accent/40 bg-accent-subtle'
-                  : isComplete
-                  ? 'border-border-subtle bg-surface/30'
-                  : 'border-transparent bg-transparent'
-              }`}
-            >
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors duration-500 ${
-                  isActive
-                    ? 'bg-accent text-white'
-                    : isComplete
-                    ? 'bg-success/10 text-success'
-                    : 'bg-elevated text-text-tertiary'
-                }`}
-              >
-                {isComplete ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <Icon className="h-4 w-4" />
-                )}
-              </div>
-              <div className="flex-1">
-                <div className={`text-[13px] font-medium transition-colors ${isActive ? 'text-text-primary' : 'text-text-secondary'}`}>
-                  {stage.label}
-                </div>
-              </div>
-              <div
-                className={`text-[11px] font-mono transition-colors ${
-                  isActive ? 'text-accent' : isComplete ? 'text-success' : 'text-text-tertiary'
-                }`}
-              >
-                {isComplete ? 'Done' : isActive ? 'Running...' : stage.detail}
-              </div>
+                return (
+                  <motion.div
+                    key={stage.label}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.08, duration: 0.4, ease: 'easeOut' }}
+                    className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-500 ${isActive
+                        ? 'border-accent/40 bg-accent-subtle shadow-sm shadow-accent/10'
+                        : isComplete
+                          ? 'border-border-subtle bg-surface/30'
+                          : 'border-transparent bg-transparent'
+                      }`}
+                  >
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all duration-500 ${isActive
+                          ? 'bg-accent text-white shadow-md shadow-accent/30'
+                          : isComplete
+                            ? 'bg-success/10 text-success'
+                            : 'bg-elevated text-text-tertiary'
+                        }`}
+                    >
+                      {isComplete ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Icon className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className={`text-[14px] font-medium transition-colors ${isActive ? 'text-text-primary' : 'text-text-secondary'}`}>
+                        {stage.label}
+                      </div>
+                    </div>
+                    <div
+                      className={`text-[11px] font-mono transition-colors ${isActive ? 'text-accent' : isComplete ? 'text-success' : 'text-text-tertiary'
+                        }`}
+                    >
+                      {isComplete ? 'Done' : isActive ? 'Running...' : stage.detail}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
 
-      {/* Data flow indicator */}
-      <div className="mt-4 flex items-center justify-between rounded-md bg-elevated px-4 py-2">
-        <span className="text-[11px] text-text-tertiary font-mono">Pipeline ETA</span>
-        <span className="text-[13px] font-mono text-accent">~12 min</span>
-      </div>
+            {/* Data flow indicator */}
+            <div className="mt-4 flex items-center justify-between rounded-md bg-elevated px-4 py-2">
+              <span className="text-[11px] text-text-tertiary font-mono">Pipeline ETA</span>
+              <span className="text-[13px] font-mono text-accent">~12 min</span>
+            </div>
+          </motion.div>
+        )}
+
+
+        {phase === 'video' && (
+          <motion.div
+            key="video"
+            initial={{ opacity: 0, scale: 0.9, filter: 'blur(12px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 z-10 flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-border-subtle bg-surface/50"
+          >
+            <video
+              ref={(el) => { if (el) el.playbackRate = 1.5; }}
+              src={`/video/video/${currentVideo}.mp4`}
+              autoPlay
+              muted
+              className="h-full w-full object-fill rounded-xl"
+              onEnded={() => {
+                if (currentVideo === 1) {
+                  setCurrentVideo(2);
+                } else {
+                  setPhase('pipeline');
+                  setActiveStage(0);
+                  setCurrentVideo(1);
+                }
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
