@@ -6,6 +6,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { db } from '../db/client';
 import { jobs } from '../db/schema';
 import { r2Client } from '../lib/r2-client';
+import { eq } from 'drizzle-orm';
+import { addVideoJob, getExistingVideoJob } from '../lib/queue';
 
 const router = Router();
 
@@ -104,6 +106,113 @@ router.post('/presign', async (req: Request, res: Response) => {
     return res.status(500).json({
       error: 'Failed to generate presigned upload URL due to an internal server error.',
     });
+  }
+});
+
+router.post('/upload-success', async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.body;
+    if (!jobId) {
+      console.warn('[upload-success] Request missing jobId.');
+      return res.status(400).json({ error: 'jobId is required.' });
+    }
+
+    console.log(`[upload-success] Processing notification for job ${jobId}.`);
+
+    const existingJobs = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
+    const job = existingJobs[0];
+
+    if (!job) {
+      console.warn(`[upload-success] Job ${jobId} not found in database.`);
+      return res.status(404).json({ error: 'No matching job record found.' });
+    }
+
+    // Idempotency (DB-level): skip if already enqueued
+    const queuedOrLater = ['queued', 'processing', 'completed', 'failed', 'purged'];
+    if (queuedOrLater.includes(job.status)) {
+      console.log(`[upload-success] Job ${jobId} already in state "${job.status}" (DB idempotency). Returning ok.`);
+      return res.status(200).json({ status: 'ok', message: 'Job already enqueued.' });
+    }
+
+    // 1. Update Job: Status = 'uploaded'
+    await db
+      .update(jobs)
+      .set({
+        status: 'uploaded',
+        updatedAt: new Date(),
+      })
+      .where(eq(jobs.id, job.id));
+
+    console.log(`[upload-success] Job ${jobId} status updated to "uploaded".`);
+
+    // 2. Pre-check: Detect if the webhook already enqueued this job into BullMQ.
+    //    This handles the race where the R2 upload-complete webhook fires before
+    //    the client-side upload-success notification arrives.
+    const existingBullMQJob = await getExistingVideoJob(job.id);
+    if (existingBullMQJob) {
+      console.log(`[upload-success] Duplicate enqueue detected: job ${jobId} already exists in BullMQ (id: ${existingBullMQJob.id}). Skipping enqueue.`);
+      // Still advance the DB status to 'queued' so downstream reads are consistent.
+      await db
+        .update(jobs)
+        .set({
+          status: 'queued',
+          updatedAt: new Date(),
+        })
+        .where(eq(jobs.id, job.id));
+
+      return res.status(200).json({
+        status: 'ok',
+        jobId: job.id,
+        message: 'Job already enqueued.',
+      });
+    }
+
+    // 3. Enqueue BullMQ Task
+    await addVideoJob({
+      jobId: job.id,
+      r2ObjectKey: job.r2ObjectKey,
+      fileSizeBytes: job.fileSizeBytes ?? 0,
+      uploadedAt: new Date().toISOString(),
+    });
+
+    console.log(`[upload-success] Job ${jobId} enqueued into BullMQ successfully.`);
+
+    // 4. Update Job: Status = 'queued'
+    await db
+      .update(jobs)
+      .set({
+        status: 'queued',
+        updatedAt: new Date(),
+      })
+      .where(eq(jobs.id, job.id));
+
+    console.log(`[upload-success] Job ${jobId} status updated to "queued". Returning success.`);
+
+    return res.status(200).json({
+      status: 'ok',
+      jobId: job.id,
+      message: 'Successfully enqueued video processing task.',
+    });
+  } catch (error: any) {
+    // Detect BullMQ duplicate-job errors that may surface at runtime.
+    // BullMQ v5 handles duplicates silently via Lua scripts, but future
+    // versions or edge-case connection errors could surface these.
+    const msg: string = error?.message ?? '';
+    if (
+      msg.includes('already exists') ||
+      msg.includes('duplicate') ||
+      error?.code === 'JOB_EXISTS'
+    ) {
+      console.log(`[upload-success] Duplicate enqueue detected via BullMQ error for job ${req.body?.jobId}. Returning idempotent success.`);
+      return res.status(200).json({
+        status: 'ok',
+        jobId: req.body?.jobId,
+        message: 'Job already enqueued.',
+      });
+    }
+
+    console.error('[upload-success] Unhandled error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 

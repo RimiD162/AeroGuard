@@ -90,13 +90,30 @@ export const useInspectionStore = create<InspectionState>()((set, get) => ({
         }
       };
 
-      xhr.onload = () => {
+      xhr.onload = async () => {
         if (xhr.status === 200) {
-          set({
-            uploadProgress: 100,
-            isUploading: false,
-            uploadedFile: { name: file.name, size: `${sizeMb} MB` },
-          });
+          try {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const notifyRes = await fetch(`${API_URL}/api/v1/uploads/upload-success`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId }),
+            });
+            if (!notifyRes.ok) {
+              throw new Error(`Failed to notify backend: ${notifyRes.statusText}`);
+            }
+            set({
+              uploadProgress: 100,
+              isUploading: false,
+              uploadedFile: { name: file.name, size: `${sizeMb} MB` },
+            });
+          } catch (notifyErr: any) {
+            console.error('Error notifying backend of upload success:', notifyErr);
+            set({
+              isUploading: false,
+              pipelineError: notifyErr.message || 'Failed to initialize processing on backend.',
+            });
+          }
         } else {
           set({
             isUploading: false,

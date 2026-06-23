@@ -88,6 +88,50 @@ export async function getPresignedUrl(
   return response.json();
 }
 
+export interface DBJob {
+  id: string;
+  r2ObjectKey: string;
+  originalFilename: string | null;
+  fileSizeBytes: number | null;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  purgedAt: string | null;
+  metricsCount: number;
+}
+
+export async function getJobs(page = 1, limit = 50): Promise<DBJob[]> {
+  const response = await fetch(`${API_URL}/api/v1/jobs?page=${page}&limit=${limit}`);
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch jobs';
+    try {
+      const errData = await response.json();
+      errorMessage = errData.error || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+export async function getJob(jobId: string): Promise<DBJob> {
+  const response = await fetch(`${API_URL}/api/v1/jobs/${jobId}`);
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch job';
+    try {
+      const errData = await response.json();
+      errorMessage = errData.error || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
 export async function getJobMetrics(jobId: string, page = 1, limit = 100): Promise<DBMetric[]> {
   const response = await fetch(`${API_URL}/api/v1/jobs/${jobId}/metrics?page=${page}&limit=${limit}`);
 

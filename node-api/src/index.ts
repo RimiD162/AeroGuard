@@ -48,6 +48,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// Route to serve test_video.mp4 for E2E simulation/automation
+app.get('/test_video.mp4', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../test_video.mp4'));
+});
+
 // 3. API Routes
 app.use('/api/v1/uploads', uploadsRouter);
 app.use('/api/v1/webhooks', webhooksRouter);

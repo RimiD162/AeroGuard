@@ -4,6 +4,14 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle, Loader2, XCircle, Box, FileText, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useInspectionStore } from '@/stores/inspection.store';
+import { DefectSeverity } from '@/types/defect';
+
+function deriveSeverity(confidence: number): DefectSeverity {
+  if (confidence >= 0.95) return 'critical';
+  if (confidence >= 0.90) return 'major';
+  if (confidence >= 0.80) return 'moderate';
+  return 'minor';
+}
 
 export default function PipelineProgress() {
   const {
@@ -32,18 +40,10 @@ export default function PipelineProgress() {
     }
   };
 
-  const getSeverity = (className: string) => {
-    const name = className.toLowerCase();
-    if (name.includes('crack')) return 'critical';
-    if (name.includes('corrosion') || name.includes('welding')) return 'major';
-    if (name.includes('dent')) return 'moderate';
-    return 'minor';
-  };
-
-  const criticalCount = detections.filter(d => getSeverity(d.class_name) === 'critical').length;
-  const majorCount = detections.filter(d => getSeverity(d.class_name) === 'major').length;
-  const moderateCount = detections.filter(d => getSeverity(d.class_name) === 'moderate').length;
-  const minorCount = detections.filter(d => getSeverity(d.class_name) === 'minor').length;
+  const criticalCount = detections.filter(d => deriveSeverity(d.confidence) === 'critical').length;
+  const majorCount = detections.filter(d => deriveSeverity(d.confidence) === 'major').length;
+  const moderateCount = detections.filter(d => deriveSeverity(d.confidence) === 'moderate').length;
+  const minorCount = detections.filter(d => deriveSeverity(d.confidence) === 'minor').length;
 
   return (
     <div className="animate-slide-up space-y-5">
@@ -144,9 +144,9 @@ export default function PipelineProgress() {
                     <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 text-[13px] transition-colors hover:bg-elevated">
                       <div className="flex items-center gap-2">
                         <span className={`h-1.5 w-1.5 rounded-full ${
-                          getSeverity(det.class_name) === 'critical' ? 'bg-danger' :
-                          getSeverity(det.class_name) === 'major' ? 'bg-warning' :
-                          getSeverity(det.class_name) === 'moderate' ? 'bg-[#EA580C]' : 'bg-success'
+                          deriveSeverity(det.confidence) === 'critical' ? 'bg-danger' :
+                          deriveSeverity(det.confidence) === 'major' ? 'bg-warning' :
+                          deriveSeverity(det.confidence) === 'moderate' ? 'bg-[#EA580C]' : 'bg-success'
                         }`} />
                         <span className="font-medium text-text-primary">{det.class_name}</span>
                       </div>

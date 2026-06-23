@@ -8,5 +8,10 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "src/verify-pipeline-e2e.ts",
+    "src/test-e2e-pipeline.ts",
+    "src/test-full-upload.ts"
+  ]
 }

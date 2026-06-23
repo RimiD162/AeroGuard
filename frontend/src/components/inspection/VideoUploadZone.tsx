@@ -12,6 +12,20 @@ export default function VideoUploadZone({ onNext, onBack }: { onNext: () => void
     startUpload(file);
   }, [startUpload]);
 
+  const startE2ESimulation = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/test_video.mp4`);
+      const blob = await response.blob();
+      const file = new File([blob], 'test_video.mp4', { type: 'video/mp4' });
+      startUpload(file);
+    } catch (err) {
+      console.error('Failed to run E2E simulation:', err);
+    }
+  }, [startUpload]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -77,6 +91,13 @@ export default function VideoUploadZone({ onNext, onBack }: { onNext: () => void
             <Upload className="mb-3 h-10 w-10 text-text-tertiary" />
             <p className="text-[14px] font-medium text-text-secondary">Drop video file here</p>
             <p className="mt-1 text-[13px] text-text-tertiary">or click to select</p>
+            <button
+              id="simulate-e2e-upload"
+              onClick={startE2ESimulation}
+              className="mt-3 rounded border border-accent bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent hover:bg-accent/20 transition-all"
+            >
+              Simulate E2E Video Upload
+            </button>
             <div className="mt-4 flex gap-2">
               {['MP4', 'MOV', 'AVI', '10GB'].map((f) => (
                 <span key={f} className="rounded border border-border-subtle bg-elevated px-2 py-0.5 text-[10px] font-medium text-text-tertiary">{f}</span>

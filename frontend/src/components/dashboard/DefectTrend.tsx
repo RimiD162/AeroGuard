@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { defectTrendData } from '@/lib/mock/dashboard';
+import { DBJob } from '@/lib/api';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -18,9 +18,36 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export default function DefectTrend() {
+function computeTrendData(jobs: DBJob[], days: number) {
+  const now = new Date();
+  const data: { date: string; inspections: number; defects: number }[] = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+
+    const dayJobs = jobs.filter((j) => {
+      const created = new Date(j.createdAt);
+      return created >= dayStart && created < dayEnd;
+    });
+
+    data.push({
+      date: dateStr,
+      inspections: dayJobs.length,
+      defects: dayJobs.reduce((sum, j) => sum + j.metricsCount, 0),
+    });
+  }
+
+  return data;
+}
+
+export default function DefectTrend({ jobs }: { jobs: DBJob[] }) {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const data = range === '7d' ? defectTrendData.slice(-7) : range === '90d' ? defectTrendData : defectTrendData;
+  const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+  const data = computeTrendData(jobs, days);
 
   return (
     <div className="rounded-lg border border-border-subtle bg-surface p-5">
@@ -43,25 +70,19 @@ export default function DefectTrend() {
       <ResponsiveContainer width="100%" height={280}>
         <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
           <defs>
-            <linearGradient id="gMinor" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#16A34A" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="#16A34A" stopOpacity={0} />
+            <linearGradient id="gInspections" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#2563EB" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
             </linearGradient>
-            <linearGradient id="gMajor" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#EA580C" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="#EA580C" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="gCritical" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="gDefects" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#DC2626" stopOpacity={0.2} />
               <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
             </linearGradient>
           </defs>
           <XAxis dataKey="date" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
           <Tooltip content={<CustomTooltip />} />
-          <Area type="monotone" dataKey="minor" stroke="#16A34A" fill="url(#gMinor)" strokeWidth={1.5} />
-          <Area type="monotone" dataKey="moderate" stroke="#D97706" fill="transparent" strokeWidth={1.5} />
-          <Area type="monotone" dataKey="major" stroke="#EA580C" fill="url(#gMajor)" strokeWidth={1.5} />
-          <Area type="monotone" dataKey="critical" stroke="#DC2626" fill="url(#gCritical)" strokeWidth={1.5} />
+          <Area type="monotone" dataKey="inspections" stroke="#2563EB" fill="url(#gInspections)" strokeWidth={1.5} />
+          <Area type="monotone" dataKey="defects" stroke="#DC2626" fill="url(#gDefects)" strokeWidth={1.5} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

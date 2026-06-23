@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { Queue, Job } from 'bullmq';
 import { redisConnection } from './redis';
 
 // Define the payload structure for queue processing jobs
@@ -15,7 +15,22 @@ export const videoQueue = new Queue<VideoJobPayload>('video-inspection', {
 });
 
 /**
- * Enqueues a video processing task into BullMQ
+ * Checks whether a job with the given ID already exists in the BullMQ queue.
+ * Returns the existing Job if found, or null if no such job exists.
+ */
+export async function getExistingVideoJob(jobId: string): Promise<Job<VideoJobPayload> | null> {
+  try {
+    const existingJob = await videoQueue.getJob(jobId);
+    return existingJob ?? null;
+  } catch (error) {
+    console.error(`Error checking for existing BullMQ job ${jobId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Enqueues a video processing task into BullMQ.
+ * Preserves explicit jobId for idempotent deduplication.
  * @param payload The job input metadata
  */
 export async function addVideoJob(payload: VideoJobPayload) {

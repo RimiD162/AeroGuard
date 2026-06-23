@@ -1,11 +1,88 @@
 import { Router, Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
+import { eq, desc, count, sql } from 'drizzle-orm';
 import { QueueEvents } from 'bullmq';
 import { db } from '../db/client';
 import { jobs, metrics } from '../db/schema';
 import { redisConnection } from '../lib/redis';
 
 const router = Router();
+
+// 0a. GET /api/v1/jobs — List all jobs with metrics count
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 50));
+    const offset = (page - 1) * limit;
+
+    const results = await db
+      .select({
+        id: jobs.id,
+        r2ObjectKey: jobs.r2ObjectKey,
+        originalFilename: jobs.originalFilename,
+        fileSizeBytes: jobs.fileSizeBytes,
+        status: jobs.status,
+        errorMessage: jobs.errorMessage,
+        createdAt: jobs.createdAt,
+        updatedAt: jobs.updatedAt,
+        completedAt: jobs.completedAt,
+        purgedAt: jobs.purgedAt,
+        metricsCount: count(metrics.id),
+      })
+      .from(jobs)
+      .leftJoin(metrics, eq(metrics.jobId, jobs.id))
+      .groupBy(jobs.id)
+      .orderBy(desc(jobs.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return res.status(200).json(results);
+  } catch (error) {
+    console.error('Error listing jobs:', error);
+    return res.status(500).json({ error: 'Failed to list jobs.' });
+  }
+});
+
+// 0b. GET /api/v1/jobs/:jobId — Single job detail
+router.get('/:jobId', async (req: Request, res: Response) => {
+  const { jobId } = req.params;
+
+  // Skip the SSE stream and metrics sub-routes
+  if (jobId === 'stream' || req.path.includes('/stream') || req.path.includes('/metrics')) {
+    return (req as any).next?.();
+  }
+
+  try {
+    const results = await db
+      .select({
+        id: jobs.id,
+        r2ObjectKey: jobs.r2ObjectKey,
+        originalFilename: jobs.originalFilename,
+        fileSizeBytes: jobs.fileSizeBytes,
+        status: jobs.status,
+        errorMessage: jobs.errorMessage,
+        createdAt: jobs.createdAt,
+        updatedAt: jobs.updatedAt,
+        completedAt: jobs.completedAt,
+        purgedAt: jobs.purgedAt,
+        metricsCount: count(metrics.id),
+      })
+      .from(jobs)
+      .leftJoin(metrics, eq(metrics.jobId, jobs.id))
+      .where(eq(jobs.id, jobId))
+      .groupBy(jobs.id)
+      .limit(1);
+
+    const job = results[0];
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found.' });
+    }
+
+    return res.status(200).json(job);
+  } catch (error) {
+    console.error('Error fetching job:', error);
+    return res.status(500).json({ error: 'Failed to fetch job.' });
+  }
+});
 
 // 1. GET /api/v1/jobs/:jobId/stream (SSE stream)
 router.get('/:jobId/stream', async (req: Request, res: Response) => {
