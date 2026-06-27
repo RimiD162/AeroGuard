@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "exclude": [
+    "src/verify-pipeline-e2e.ts",
+    "src/test-e2e-pipeline.ts",
+    "src/test-full-upload.ts"
+  ],
+  "include": [
+    "src/**/*"
+  ]
+}
