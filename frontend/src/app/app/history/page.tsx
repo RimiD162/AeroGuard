@@ -106,7 +106,7 @@ export default function HistoryPage() {
 
           {loading ? (
             <>
-            <div className="rounded-lg border border-border-subtle bg-surface overflow-hidden">
+            <div className="rounded-lg border border-border-subtle bg-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border-subtle">

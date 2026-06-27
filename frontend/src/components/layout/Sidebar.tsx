@@ -59,6 +59,9 @@ export default function Sidebar() {
         <div className="px-3 pt-4 pb-2">
           <Link
             href="/app/inspection/new"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.innerWidth < 1024) toggleSidebar();
+            }}
             className={cn(
               'flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover',
               !sidebarExpanded && 'px-0'
@@ -106,6 +109,9 @@ export default function Sidebar() {
                       onClick={() => {
                         if (item.href !== pathname && !pathname.startsWith(item.href + '/')) {
                           setPendingRoute(item.href);
+                        }
+                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                          toggleSidebar();
                         }
                       }}
                       className={cn(

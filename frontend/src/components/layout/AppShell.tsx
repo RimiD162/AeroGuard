@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useUIStore } from '@/stores/ui.store';
 import Sidebar from './Sidebar';
 import CommandPalette from './CommandPalette';
@@ -11,7 +12,13 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { sidebarExpanded } = useUIStore();
+  const { sidebarExpanded, setSidebarExpanded } = useUIStore();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarExpanded(false);
+    }
+  }, [setSidebarExpanded]);
 
   return (
     <div className="flex min-h-screen">
