@@ -17,7 +17,7 @@ const parts = [
   { pn: 'V2500-CS-0817', desc: 'Casing, Fan Frame', mfr: 'IAE', qty: 0, min: 1, status: 'out_of_stock' as const },
 ];
 
-export const dummyOrders = [
+const dummyOrders = [
   { id: 'PO-2024-0312', pn: 'CFM56-5B-L28410', desc: 'LPT Blade, Stage 2', qty: 2, supplier: 'Aviall Services', status: 'pending', date: '2025-06-12', eta: '2025-06-17', cost: 104000, priority: 'critical' as const, inspection: 'INS-2024-0840' },
   { id: 'PO-2024-0311', pn: 'CFM56-CB-01224', desc: 'Combustion Liner', qty: 3, supplier: 'HEICO Corp', status: 'shipped', date: '2025-06-10', eta: '2025-06-14', cost: 87600, priority: 'urgent' as const, inspection: 'INS-2024-0841' },
   { id: 'PO-2024-0310', pn: 'V2500-CS-0817', desc: 'Casing, Fan Frame', qty: 1, supplier: 'AAR Corp', status: 'approved', date: '2025-06-08', eta: '2025-06-20', cost: 156000, priority: 'routine' as const, inspection: 'INS-2024-0845' },
